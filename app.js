@@ -64,17 +64,16 @@ app.get('/music/:vidurl', function(req, res) {
 app.post('/create', async function(req, res) {
   const url = req.body.vidurl;
   const title = url.substr(32);
-  // const music = fs.createWriteStream(__dirname + '/public/music/music.mp3');
+  const music = fs.createWriteStream(__dirname + '/public/music/music.mp3');
 
   // Function to pipe audio and save it as an mp3
   let streamer
   try {
-    streamer = await stream(url).pipe(decoder()).pipe(encoder()).pipe(fs.createWriteStream(__dirname + '/public/music/music.mp3'));
+    streamer = await stream(url).pipe(decoder()).pipe(encoder()).pipe(music);
   } catch (err) {
     logger.error('Stream create error', err)
     return res.status(500).send()
   }
-
   streamer.on('finish', () => {
     res.redirect('./?title='+title);
   });
@@ -82,9 +81,9 @@ app.post('/create', async function(req, res) {
 });
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
+// app.use(function(req, res, next) {
+//   next(createError(404));
+// });
 
 // error handler
 // app.use(function(err, req, res, next) {
