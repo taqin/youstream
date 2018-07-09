@@ -61,14 +61,20 @@ app.get('/music/:vidurl', function(req, res) {
   }  
 });
 
-app.post('/create', function(req, res) {
+app.post('/create', async function(req, res) {
   const url = req.body.vidurl;
   const title = url.substr(32);
   const music = fs.createWriteStream(__dirname + '/public/music/music.mp3');
-  const streamer = stream(url)
-    .pipe(decoder())
-    .pipe(encoder())
-    .pipe(music);
+
+  // Function to pipe audio and save it as an mp3
+  let streamer
+  try {
+    streamer = await stream(url).pipe(decoder()).pipe(encoder()).pipe(music);
+  } catch (err) {
+    logger.error('Stream create error', err)
+    return res.status(500).send()
+  }
+
   streamer.on('finish', () => {
     res.redirect('./?title='+title);
   });
