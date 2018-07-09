@@ -52,7 +52,7 @@ app.get('/music/:vidurl', function(req, res) {
     res.writeHead(206, {
       'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
       'Accept-Ranges': 'bytes', 'Content-Length': chunksize,
-      'Content-Type': 'video/mp4'
+      'Content-Type': 'audio/mpeg'
     });
     readStream.pipe(res);
   } else {
@@ -64,12 +64,12 @@ app.get('/music/:vidurl', function(req, res) {
 app.post('/create', async function(req, res) {
   const url = req.body.vidurl;
   const title = url.substr(32);
-  const music = fs.createWriteStream(__dirname + '/public/music/music.mp3');
+  // const music = fs.createWriteStream(__dirname + '/public/music/music.mp3');
 
   // Function to pipe audio and save it as an mp3
   let streamer
   try {
-    streamer = await stream(url).pipe(decoder()).pipe(encoder()).pipe(music);
+    streamer = await stream(url).pipe(decoder()).pipe(encoder()).pipe(fs.createWriteStream(__dirname + '/public/music/music.mp3'));
   } catch (err) {
     logger.error('Stream create error', err)
     return res.status(500).send()
