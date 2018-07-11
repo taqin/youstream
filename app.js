@@ -61,6 +61,11 @@ app.get('/music/:vidurl', function(req, res) {
   }  
 });
 
+app.get('/stream', function (req, res) {
+  // const url = 'https://www.youtube.com/watch?v=jONFxUX-kjQ';
+  // stream(url).pipe(decoder()).pipe(encoder()).pipe(res);
+});
+
 app.post('/create', async function(req, res) {
   const url = req.body.vidurl;
   const title = url.substr(32);
@@ -69,9 +74,13 @@ app.post('/create', async function(req, res) {
   // Function to pipe audio and save it as an mp3
   let streamer
   try {
-    streamer = await stream(url).pipe(decoder()).pipe(encoder()).pipe(music);
+    streamer = await stream(url)
+      .pipe(decoder())
+      .pipe(encoder())
+      .pipe(music);
+
   } catch (err) {
-    logger.error('Stream create error', err)
+    console.log('Stream create error', err)
     return res.status(500).send()
   }
   streamer.on('finish', () => {
@@ -96,7 +105,7 @@ app.post('/create', async function(req, res) {
 //   res.send('error');
 // });
 
-app.listen(8080);
-console.log('8080 is the magic port');
+app.listen(3333);
+console.log('3333 is the magic port');
 
 module.exports = app;

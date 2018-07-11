@@ -14,23 +14,31 @@
   <body>
     <div class="container mt-5 text-center">
       <h1>Audio Stream</h1>
-
-      <audio controls preload="auto" style="width:100%;">
-       <source src="./music/<%= thumbnail %>" type="audio/mpeg">
-      Your browser does not support the audio element.
-      </audio
-
-      <div class="card" style="width: 100%;">
-        <img class="card-img-top" src="https://img.youtube.com/vi/<%= thumbnail %>/hqdefault.jpg" alt="Card image cap">
-        
-        <div class="card-body text-center">
-          <form class="needs-validation" action="/create" method="POST" novalidate>
-            <input name="vidurl" id="vidurl" class="form-control form-control-lg mb-2" type="text" placeholder="Enter video URL">
-            <button class="btn btn-primary btn-lg btn-block" type="submit">Submit</button>
-          </form>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card">
+            <img class="card-img-top" src="https://img.youtube.com/vi/<%= thumbnail %>/hqdefault.jpg" alt="Card image cap">
+          
+            <div class="card-body text-center">
+              <form class="needs-validation" action="/create" method="POST" novalidate>
+                <input name="vidurl" id="vidurl" class="form-control form-control-lg mb-2" type="text" placeholder="Enter video URL">
+                <button class="btn btn-primary btn-lg btn-block" type="submit">Submit</button>
+              </form>
+            </div>
+          </div>
         </div>
-      </div>
+        <div class="col-md-6">
+          <p>Read from MP3 file</p>
+          <audio controls preload="auto" style="width:100%;">
+            <source src="./music/<%= thumbnail %>" type="audio/mpeg"> Your browser does not support the audio element.
+          </audio>
 
+          <p>Read via Streaming audio</p>
+          <audio controls preload="auto" style="width:100%;">
+            <source src="/stream" type="audio/mpeg"> Your browser does not support the audio element.
+          </audio>
+        </div>
+      </div>  
       
     </div>
     <!-- Optional JavaScript -->
