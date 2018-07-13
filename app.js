@@ -7,10 +7,10 @@ const logger = require('morgan');
 const fs = require('fs');
 const readline = require('readline');
 const ytdl = require('ytdl-core');
-const ffmpeg = require('fluent-ffmpeg');
+const ffmpeg = require('ffmpeg');
+const fluentFfmpeg = require('fluent-ffmpeg');
 // const indexRouter = require('./routes/index');
 // const musicRouter = require('./routes/music');
-
 
 const app = express();
 // view engine setup
@@ -72,7 +72,7 @@ app.post('/create', async function(req, res) {
   // Function to pipe audio and save it as an mp3
   let streamer
   try {
-    streamer = await ffmpeg(stream)
+    streamer = await fluentFfmpeg(stream)
       .audioBitrate(128)
       .save(__dirname + '/public/music/music.mp3')
       .on('progress', p => {
