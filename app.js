@@ -7,6 +7,7 @@ const logger = require('morgan');
 const fs = require('fs');
 const readline = require('readline');
 const ytdl = require('ytdl-core');
+const ffmpeg_static = require('ffmpeg-static');
 const ffmpeg = require('ffmpeg');
 const fluentFfmpeg = require('fluent-ffmpeg');
 // const indexRouter = require('./routes/index');
@@ -73,6 +74,7 @@ app.post('/create', async function(req, res) {
   let streamer
   try {
     streamer = await fluentFfmpeg(stream)
+      .setFfmpegPath(ffmpeg_static.path)
       .audioBitrate(128)
       .save(__dirname + '/public/music/music.mp3')
       .on('progress', p => {
