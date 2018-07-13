@@ -71,5 +71,4 @@ typings/
 
 # Serverless directories
 .serverless
-
-# public/music/music.mp3
+public/music/music.mp3

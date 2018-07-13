@@ -5,13 +5,12 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 
 const fs = require('fs');
-const stream = require('youtube-audio-stream');
-const lame = require('lame');
-const decoder = require('lame').Decoder;
-const encoder = require('lame').Encoder;
+const readline = require('readline');
+const ytdl = require('ytdl-core');
+const ffmpeg = require('fluent-ffmpeg');
+// const indexRouter = require('./routes/index');
+// const musicRouter = require('./routes/music');
 
-const indexRouter = require('./routes/index');
-const musicRouter = require('./routes/music');
 
 const app = express();
 // view engine setup
@@ -23,7 +22,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // app.use('/', indexRouter);
-// app.use('/music', musicRouter);
+// app.use('/player', musicRouter);
 
 // index page 
 app.get('/', function (req, res) {
@@ -61,32 +60,34 @@ app.get('/music/:vidurl', function(req, res) {
   }  
 });
 
-app.get('/stream', function (req, res) {
-  // const url = 'https://www.youtube.com/watch?v=jONFxUX-kjQ';
-  // stream(url).pipe(decoder()).pipe(encoder()).pipe(res);
-});
-
 app.post('/create', async function(req, res) {
   const url = req.body.vidurl;
   const title = url.substr(32);
-  const music = fs.createWriteStream(__dirname + '/public/music/music.mp3');
+  const start = Date.now();
+  const stream = ytdl(url, {
+    quality: 'highestaudio'
+    //filter: 'audioonly',
+  });
 
   // Function to pipe audio and save it as an mp3
   let streamer
   try {
-    streamer = await stream(url)
-      .pipe(decoder())
-      .pipe(encoder())
-      .pipe(music);
+    streamer = await ffmpeg(stream)
+      .audioBitrate(128)
+      .save(__dirname + '/public/music/music.mp3')
+      .on('progress', p => {
+        readline.cursorTo(process.stdout, 0);
+        process.stdout.write(`${p.targetSize}kb downloaded`);
+      })
+      .on('end', () => {
+        console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s`);
+        res.redirect('./?title=' + title);
+      });
 
   } catch (err) {
     console.log('Stream create error', err)
     return res.status(500).send()
   }
-  streamer.on('finish', () => {
-    res.redirect('./?title='+title);
-  });
-
 });
 
 // catch 404 and forward to error handler
@@ -105,7 +106,7 @@ app.post('/create', async function(req, res) {
 //   res.send('error');
 // });
 
-app.listen(3333);
-console.log('3333 is the magic port');
+app.listen(4000);
+console.log('4000 is the magic port');
 
 module.exports = app;
