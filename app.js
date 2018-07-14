@@ -3,7 +3,6 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-
 const fs = require('fs');
 const readline = require('readline');
 const ytdl = require('ytdl-core');
@@ -35,7 +34,7 @@ app.get('/', function (req, res) {
   }
 });
 
-app.get('/music/:vidurl', function(req, res) {
+app.get('/music', function(req, res) {
   const filePath = __dirname + '/public/music/music.mp3';
   const stat = fs.statSync(filePath);
   const total = stat.size;
@@ -69,7 +68,6 @@ app.post('/create', async function(req, res) {
     quality: 'highestaudio'
     //filter: 'audioonly',
   });
-
   // Function to pipe audio and save it as an mp3
   let streamer
   try {
@@ -85,10 +83,31 @@ app.post('/create', async function(req, res) {
         console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s`);
         res.redirect('./?title=' + title);
       });
-
   } catch (err) {
     console.log('Stream create error', err)
     return res.status(500).send()
+  }
+});
+
+app.post('/stream', async function (req, res) {
+  const url = req.body.vidurl;
+  const stream = ytdl(url, {
+    quality: 'highestaudio'
+  });
+  let streamer;
+  try {
+    streamer = await fluentFfmpeg(stream)
+      .setFfmpegPath(ffmpeg_static.path)
+      .audioBitrate(128)
+      .on('progress', p => {
+        pipe(res);
+      })
+      .on('end', () => {
+        console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s`);
+      });
+  } catch (err) {
+    console.log('Stream create error', err);
+    return res.status(500).send();
   }
 });
 

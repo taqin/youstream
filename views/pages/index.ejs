@@ -12,27 +12,35 @@
     <title>YouStreamer</title>
   </head>
   <body>
-    <div class="container mt-5 text-center">
-      <h1>Audio Stream</h1>
+    <div class="container mt-3">
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-6 offset-md-3">
           <div class="card">
+            <form class="needs-validation" action="/create" method="POST" novalidate>
+            <div class="card-header">Audio Streaming</div>
             <img class="card-img-top" src="https://img.youtube.com/vi/<%= thumbnail %>/hqdefault.jpg" alt="Card image cap">
-          
             <div class="card-body text-center">
-              <form class="needs-validation" action="/create" method="POST" novalidate>
-                <input name="vidurl" id="vidurl" class="form-control form-control-lg mb-2" type="text" placeholder="Enter video URL">
-                <button class="btn btn-primary btn-lg btn-block" type="submit">Submit</button>
-              </form>
+              <input name="vidurl" id="vidurl" class="form-control form-control-lg mb-2" type="text" placeholder="Enter video URL" required>
+              <div class="invalid-feedback">
+                Please add a valid URL.
+              </div>
+              <audio controls preload="auto" style="width:100%;">
+                <source src="./music" type="audio/mpeg"> Your browser does not support the audio element.
+              </audio>
             </div>
+            <div class="card-footer">
+              <button class="btn btn-primary btn-lg" type="submit">Stream</button>
+              <a class="btn btn-success btn-lg">Download</a>
+            </div>
+          </form>
           </div>
         </div>
-        <div class="col-md-6">
+        <!-- <div class="col-md-6">
           <p>Read from MP3 file</p>
           <audio controls preload="auto" style="width:100%;">
             <source src="./music/<%= thumbnail %>" type="audio/mpeg"> Your browser does not support the audio element.
           </audio>
-        </div>
+        </div> -->
       </div>  
       
     </div>
@@ -41,5 +49,27 @@
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>
+
+    <script>
+    // Example starter JavaScript for disabling form submissions if there are invalid fields
+    (function() {
+      'use strict';
+      window.addEventListener('load', function() {
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        var forms = document.getElementsByClassName('needs-validation');
+        // Loop over them and prevent submission
+        var validation = Array.prototype.filter.call(forms, function(form) {
+          form.addEventListener('submit', function(event) {
+            if (form.checkValidity() === false) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+          }, false);
+        });
+      }, false);
+    })();
+    </script>
+
   </body>
 </html>
