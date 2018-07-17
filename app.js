@@ -34,6 +34,7 @@ app.get('/', function (req, res) {
   }
 });
 
+// Reading from MP3
 app.get('/music', function(req, res) {
   const filePath = __dirname + '/public/music/music.mp3';
   const stat = fs.statSync(filePath);
@@ -43,7 +44,6 @@ app.get('/music', function(req, res) {
     const parts = range.replace(/bytes=/, "").split("-");
     const partialstart = parts[0];
     const partialend = parts[1];
-
     const start = parseInt(partialstart, 10);
     const end = partialend ? parseInt(partialend, 10) : total - 1;
     const chunksize = (end - start) + 1;
@@ -60,6 +60,7 @@ app.get('/music', function(req, res) {
   }  
 });
 
+// Creating the MP3
 app.post('/create', async function(req, res) {
   const url = req.body.vidurl;
   const title = url.substr(32);
@@ -89,26 +90,21 @@ app.post('/create', async function(req, res) {
   }
 });
 
-app.post('/stream', async function (req, res) {
-  const url = req.body.vidurl;
-  const stream = ytdl(url, {
-    quality: 'highestaudio'
-  });
-  let streamer;
-  try {
-    streamer = await fluentFfmpeg(stream)
-      .setFfmpegPath(ffmpeg_static.path)
-      .audioBitrate(128)
-      .on('progress', p => {
-        pipe(res);
-      })
-      .on('end', () => {
-        console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s`);
-      });
-  } catch (err) {
-    console.log('Stream create error', err);
-    return res.status(500).send();
-  }
+// Get the Youtube URL and stream the audio
+app.post('/streamer', function (req, res) {
+  const vidurl = req.body.vidurl;
+  const title = vidurl.substr(32);
+  const stream = ytdl(vidurl, { quality: 'highestaudio' });
+  // Get the stream url
+  stream.pipe(res);
+  // Digest the stream and pipe it out as a response 
+  // res.redirect('/stream?url=' + url);
+});
+
+// Play the MP3 directly from Buffer
+app.get('/stream/:title', function (req, res) {
+  // https://www.youtube.com/watch?v=jONFxUX-kjQ
+  console.log(res);
 });
 
 // catch 404 and forward to error handler
