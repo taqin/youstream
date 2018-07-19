@@ -69,6 +69,7 @@ app.post('/create', async function(req, res) {
     quality: 'highestaudio'
     //filter: 'audioonly',
   });
+
   // Function to pipe audio and save it as an mp3
   let streamer
   try {
@@ -81,8 +82,9 @@ app.post('/create', async function(req, res) {
         process.stdout.write(`${p.targetSize}kb downloaded`);
       })
       .on('end', () => {
+        res.send({title});
         console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s`);
-        res.redirect('./?title=' + title);
+        // res.redirect('./?title=' + title);
       });
   } catch (err) {
     console.log('Stream create error', err)
@@ -94,9 +96,12 @@ app.post('/create', async function(req, res) {
 app.post('/streamer', function (req, res) {
   const vidurl = req.body.vidurl;
   const title = vidurl.substr(32);
-  const stream = ytdl(vidurl, { quality: 'highestaudio' });
+  const stream = ytdl(vidurl, { quality: 'highestaudio' }).pipe(res);
   // Get the stream url
-  stream.pipe(res);
+  // return stream.pipe(res);
+  
+  res.send(stream);
+
   // Digest the stream and pipe it out as a response 
   // res.redirect('/stream?url=' + url);
 });

@@ -18,15 +18,17 @@
           <div class="card">
             <form class="needs-validation" action="/create" method="POST" novalidate>
             <div class="card-header">Audio Streaming</div>
-            <img class="card-img-top" src="https://img.youtube.com/vi/<%= thumbnail %>/hqdefault.jpg" alt="Card image cap">
+            <img id="thumbnail" class="card-img-top" src="https://img.youtube.com/vi/<%= thumbnail %>/hqdefault.jpg" alt="Card image cap">
             <div class="card-body text-center">
-              <input name="vidurl" id="vidurl" class="form-control form-control-lg mb-2" type="text" placeholder="Enter video URL" required>
+              <input name="vidurl" id="vidurl" class="form-control form-control-lg mb-2" type="text" placeholder="Enter video URL" value="https://www.youtube.com/watch?v=RZNXVoV_Fxg" required>
               <div class="invalid-feedback">
                 Please add a valid URL.
               </div>
+              <!--
               <audio controls preload="auto" style="width:100%;">
                 <source src="./music" type="audio/mpeg"> Your browser does not support the audio element.
               </audio>
+              -->
               <div id="streamPlayer"></div>
               <!-- <audio controls preload="auto" style="width:100%;">
                 <source src="./stream" type="audio/mpeg"> Your browser does not support the audio element.
@@ -49,7 +51,7 @@
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>
-
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script> 
     <script>
     // Example starter JavaScript for disabling form submissions if there are invalid fields
     (function() {
@@ -72,38 +74,32 @@
 
     const btnStream = document.getElementById('btnStream');
 
+    // THE STREAM BUTTON --------------------------------------------------------------------
     btnStream.addEventListener('click', function(e) {
       // Get the value of the text input.
-      const inputURL = JSON.stringify(document.getElementById('vidurl').value);
-      // console.log('Streaming button was clicked');
-      // console.log(inputURL);      
-      postRequest('/create', {vidurl: inputURL})
-      .then(
-        // data => console.log(data);
-        streamPlayer(data)
-      ); // Result from the `response.json()` call
+      // const inputURL = JSON.stringify(document.getElementById('vidurl').value);
+      const inputURL = document.getElementById('vidurl').value;
+      
+      axios.post('/create', {
+        vidurl: inputURL
+      })
+      .then(function (response) {
+        console.log(response.data.url);
+        document.getElementById("thumbnail").src="https://img.youtube.com/vi/"+response.data.title+"/hqdefault.jpg";
+        streamPlayer();
+        })
+      .catch(function (error) {
+        console.log(error);
+        });
     });
 
-    async function postRequest(url, data) {
-      return fetch(url, {
-        credentials: 'same-origin', // 'include', default: 'omit'
-        method: 'POST', // 'GET', 'PUT', 'DELETE', etc.
-        body: JSON.stringify(data), // Coordinate the body type with 'Content-Type'
-        headers: new Headers({
-          'Content-Type': 'application/json'
-        }),
-      })
-      .then(response => response.json())
-      .catch(error => console.error(error))
-    };
-
     // Render the Audio Player on demand
-    function streamPlayer(streamURL){
+    function streamPlayer(){
       const player = document.getElementById('streamPlayer');
       // Append music player here.
       player.innerHTML = "<p>Read from MP3 Stream</p>" 
           +"<audio controls preload='auto' style='width:100%;'>"
-          +"<source src='./stream/"+streamURL+"' type='audio/mpeg'> Your browser does not support the audio element."
+          +"<source src='./music' type='audio/mpeg'> Your browser does not support the audio element."
           +"</audio>";
     };
 
