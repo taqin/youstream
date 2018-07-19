@@ -78,12 +78,14 @@ app.post('/create', async function(req, res) {
       .audioBitrate(128)
       .save(__dirname + '/public/music/music.mp3')
       .on('progress', p => {
+        let progStatus = p.targetSize;
         readline.cursorTo(process.stdout, 0);
-        process.stdout.write(`${p.targetSize}kb downloaded`);
+        process.stdout.write(`${progStatus}kb downloaded`);
       })
       .on('end', () => {
-        res.send({title});
-        console.log(`\ndone, thanks - ${(Date.now() - start) / 1000}s`);
+        // res.end();
+        res.send({ title});
+        console.log(`\nCompleted, thanks - ${(Date.now() - start) / 1000}s`);
         // res.redirect('./?title=' + title);
       });
   } catch (err) {

@@ -17,8 +17,13 @@
         <div class="col-md-6 offset-md-3">
           <div class="card">
             <form class="needs-validation" action="/create" method="POST" novalidate>
-            <div class="card-header">Audio Streaming</div>
+            <div class="card-header">Audio Streaming
+              <div id="total" class="float-right">kb</div>
+            </div>
             <img id="thumbnail" class="card-img-top" src="https://img.youtube.com/vi/<%= thumbnail %>/hqdefault.jpg" alt="Card image cap">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+            </div>
             <div class="card-body text-center">
               <input name="vidurl" id="vidurl" class="form-control form-control-lg mb-2" type="text" placeholder="Enter video URL" value="https://www.youtube.com/watch?v=RZNXVoV_Fxg" required>
               <div class="invalid-feedback">
@@ -84,9 +89,8 @@
         vidurl: inputURL
       })
       .then(function (response) {
-        console.log(response.data.url);
-        document.getElementById("thumbnail").src="https://img.youtube.com/vi/"+response.data.title+"/hqdefault.jpg";
-        streamPlayer();
+        console.log(response.status);
+        streamPlayer(response.data.title);
         })
       .catch(function (error) {
         console.log(error);
@@ -94,8 +98,10 @@
     });
 
     // Render the Audio Player on demand
-    function streamPlayer(){
+    function streamPlayer(title){
       const player = document.getElementById('streamPlayer');
+      // Update the thumbnail.
+      document.getElementById("thumbnail").src="https://img.youtube.com/vi/"+title+"/hqdefault.jpg";
       // Append music player here.
       player.innerHTML = "<p>Read from MP3 Stream</p>" 
           +"<audio controls preload='auto' style='width:100%;'>"
