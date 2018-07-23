@@ -9,10 +9,13 @@ const ytdl = require('ytdl-core');
 const ffmpeg_static = require('ffmpeg-static');
 const ffmpeg = require('ffmpeg');
 const fluentFfmpeg = require('fluent-ffmpeg');
-// const indexRouter = require('./routes/index');
-// const musicRouter = require('./routes/music');
+const kue = require('kue');
 
 const app = express();
+
+// REDIS Kue Initialize
+const queue = kue.createQueue();
+
 // view engine setup
 app.set('view engine', 'ejs');
 
@@ -21,10 +24,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// app.use('/', indexRouter);
-// app.use('/player', musicRouter);
-
-// index page 
+// Index page 
 app.get('/', function (req, res) {
   if (req.query.title !== 'undefined') {
     const title = req.query.title;
@@ -33,6 +33,57 @@ app.get('/', function (req, res) {
     res.render('pages/index');
   }
 });
+
+// Creating the MP3 ---------------------------------------------------------------
+app.post('/create', (req, res) => {
+  const audio = req.body;
+  // Create a KUE
+  const job = queue.create('audioConversion', {
+    title: 'Converting Stream to MP3', 
+    url: audio.vidurl
+  })
+  .priority('critical')
+  .attempts(5)
+  .backoff(true)
+  .removeOnComplete(true)
+  .save(function (err) {
+    if (!err) console.log(job.id);
+  });
+  // Process the KUE
+  queue.process('audioConversion', 2, (job, done) => {
+    // Convert the audio
+    convertAudio(job.data.url, done);
+  });
+  res.send(job.id);
+});
+
+// Function to pipe audio and save it as an mp3
+function convertAudio(audio) {
+  const url = audio;
+  const start = Date.now();
+  const title = url.substr(32);
+  const stream = ytdl(url, {
+    quality: 'highestaudio'
+  });
+  let streamer
+  try {
+    streamer = fluentFfmpeg(stream)
+      .setFfmpegPath(ffmpeg_static.path)
+      .audioBitrate(128)
+      .save(__dirname + '/public/music/music.mp3')
+      .on('progress', p => {
+        let progStatus = p.targetSize;
+        readline.cursorTo(process.stdout, 0);
+        process.stdout.write(`${progStatus}kb downloaded`);
+      })
+      .on('end', () => {
+        console.log(`\nCompleted, thanks - ${(Date.now() - start) / 1000}s`);
+      });
+  } catch (err) {
+    console.log('Stream create error', err)
+    return res.status(500).send()
+  } 
+};
 
 // Reading from MP3
 app.get('/music', function(req, res) {
@@ -60,59 +111,6 @@ app.get('/music', function(req, res) {
   }  
 });
 
-// Creating the MP3
-app.post('/create', async function(req, res) {
-  const url = req.body.vidurl;
-  const title = url.substr(32);
-  const start = Date.now();
-  const stream = ytdl(url, {
-    quality: 'highestaudio'
-    //filter: 'audioonly',
-  });
-
-  // Function to pipe audio and save it as an mp3
-  let streamer
-  try {
-    streamer = await fluentFfmpeg(stream)
-      .setFfmpegPath(ffmpeg_static.path)
-      .audioBitrate(128)
-      .save(__dirname + '/public/music/music.mp3')
-      .on('progress', p => {
-        let progStatus = p.targetSize;
-        readline.cursorTo(process.stdout, 0);
-        process.stdout.write(`${progStatus}kb downloaded`);
-      })
-      .on('end', () => {
-        // res.end();
-        res.send({ title});
-        console.log(`\nCompleted, thanks - ${(Date.now() - start) / 1000}s`);
-        // res.redirect('./?title=' + title);
-      });
-  } catch (err) {
-    console.log('Stream create error', err)
-    return res.status(500).send()
-  }
-});
-
-// Get the Youtube URL and stream the audio
-app.post('/streamer', function (req, res) {
-  const vidurl = req.body.vidurl;
-  const title = vidurl.substr(32);
-  const stream = ytdl(vidurl, { quality: 'highestaudio' }).pipe(res);
-  // Get the stream url
-  // return stream.pipe(res);
-  
-  res.send(stream);
-
-  // Digest the stream and pipe it out as a response 
-  // res.redirect('/stream?url=' + url);
-});
-
-// Play the MP3 directly from Buffer
-app.get('/stream/:title', function (req, res) {
-  // https://www.youtube.com/watch?v=jONFxUX-kjQ
-  console.log(res);
-});
 
 // catch 404 and forward to error handler
 // app.use(function(req, res, next) {
@@ -130,6 +128,7 @@ app.get('/stream/:title', function (req, res) {
 //   res.send('error');
 // });
 
+kue.app.listen(4005);  
 app.listen(4000);
 console.log('4000 is the magic port');
 
