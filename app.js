@@ -37,6 +37,9 @@ app.get('/', function (req, res) {
 // Creating the MP3 ---------------------------------------------------------------
 app.post('/create', (req, res) => {
   const audio = req.body;
+  // Get the unique URL of the video for thumbnail generation
+  const imageTitle = audio.vidurl.substr(32);
+
   // Create a KUE
   const job = queue.create('audioConversion', {
     title: 'Converting Stream to MP3', 
@@ -47,21 +50,31 @@ app.post('/create', (req, res) => {
   .backoff(true)
   .removeOnComplete(true)
   .save(function (err) {
-    if (!err) console.log(job.id);
+    if (!err) 
+      res.status(200).send({
+        jobID : job.id,
+        title : imageTitle 
+      });
+      console.log(`Job ID: ` + job.id);
   });
   // Process the KUE
-  queue.process('audioConversion', 2, (job, done) => {
+  queue.process('audioConversion', (job, done) => {
     // Convert the audio
     convertAudio(job.data.url, done);
   });
-  res.send(job.id);
+
+  job.on('complete', (result) => {
+    console.log('Job completed with data ', result);
+  })
+  .on('progress', function (progress, data) {
+    console.log('\r  job #' + job.id + ' ' + progress + '% complete with data ', data);
+  });
 });
 
 // Function to pipe audio and save it as an mp3
-function convertAudio(audio) {
+function convertAudio(audio, done) {
   const url = audio;
   const start = Date.now();
-  const title = url.substr(32);
   const stream = ytdl(url, {
     quality: 'highestaudio'
   });
@@ -77,13 +90,19 @@ function convertAudio(audio) {
         process.stdout.write(`${progStatus}kb downloaded`);
       })
       .on('end', () => {
-        console.log(`\nCompleted, thanks - ${(Date.now() - start) / 1000}s`);
+        console.log(`\nCompleted conversion, Success!! - ${(Date.now() - start) / 1000}s`);
+        done();
       });
   } catch (err) {
     console.log('Stream create error', err)
     return res.status(500).send()
   } 
 };
+
+// Playing from HTML player
+app.get('/player', function (req, res) {
+  res.render('pages/player')
+});
 
 // Reading from MP3
 app.get('/music', function(req, res) {
