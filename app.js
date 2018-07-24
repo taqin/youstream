@@ -61,32 +61,7 @@ app.post('/create', (req, res) => {
   // Process the KUE ---------------------------------------------------------------
   queue.process('audioConversion', (job, done) => {
     // Convert the audio
-    // convertAudio(job.data.url, done);
-    const url = job.data.url;
-    const start = Date.now();
-    const stream = ytdl(url, {
-      quality: 'highestaudio'
-    });
-    let streamer
-    try {
-      streamer = fluentFfmpeg(stream)
-        .setFfmpegPath(ffmpeg_static.path)
-        .audioBitrate(128)
-        .save(__dirname + '/public/music/music.mp3')
-        .on('progress', p => {
-          let progStatus = p.targetSize;
-          readline.cursorTo(process.stdout, 0);
-          process.stdout.write(`${progStatus}kb downloaded`);
-          // job.progress( i, frames);
-        })
-        .on('end', () => {
-          console.log(`\nCompleted conversion, Success!! - ${(Date.now() - start) / 1000}s`);
-          done();
-        });
-    } catch (err) {
-      console.log('Stream create error', err)
-      return res.status(500).send()
-    } 
+    convertAudio(job.data.url, job, done);
   });
   job.on('complete', result => {
     console.log('Job completed with data ', result);
