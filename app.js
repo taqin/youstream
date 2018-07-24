@@ -39,10 +39,10 @@ app.post('/create', (req, res) => {
   const audio = req.body;
   // Get the unique URL of the video for thumbnail generation
   const imageTitle = audio.vidurl.substr(32);
-
+  
   // Create a KUE
-  const job = queue.create('audioConversion', {
-    title: 'Converting Stream to MP3', 
+  let job = queue.create('audioConversion', {
+    title: 'Converting Stream to MP3 - ' + imageTitle, 
     url: audio.vidurl
   })
   .priority('critical')
@@ -57,21 +57,52 @@ app.post('/create', (req, res) => {
       });
       console.log(`Job ID: ` + job.id);
   });
-  // Process the KUE
+
+  // Process the KUE ---------------------------------------------------------------
   queue.process('audioConversion', (job, done) => {
     // Convert the audio
-    convertAudio(job.data.url, done);
+    // convertAudio(job.data.url, done);
+    const url = job.data.url;
+    const start = Date.now();
+    const stream = ytdl(url, {
+      quality: 'highestaudio'
+    });
+    let streamer
+    try {
+      streamer = fluentFfmpeg(stream)
+        .setFfmpegPath(ffmpeg_static.path)
+        .audioBitrate(128)
+        .save(__dirname + '/public/music/music.mp3')
+        .on('progress', p => {
+          let progStatus = p.targetSize;
+          readline.cursorTo(process.stdout, 0);
+          process.stdout.write(`${progStatus}kb downloaded`);
+          // job.progress( i, frames);
+        })
+        .on('end', () => {
+          console.log(`\nCompleted conversion, Success!! - ${(Date.now() - start) / 1000}s`);
+          done();
+        });
+    } catch (err) {
+      console.log('Stream create error', err)
+      return res.status(500).send()
+    } 
   });
-
-  job.on('complete', (result) => {
+  job.on('complete', result => {
     console.log('Job completed with data ', result);
-  })
-  .on('progress', function (progress, data) {
-    console.log('\r  job #' + job.id + ' ' + progress + '% complete with data ', data);
   });
+  job.progress();
+  job.complete();
+
+  // job.on('complete', result => {
+  //   console.log('Job completed with data ', result);
+  // });
+  // job.on('progress', (progress, data) => {
+  //   console.log('\r  job #' + job.id + ' ' + progress + '% complete with data ', data);
+  // });
 });
 
-// Function to pipe audio and save it as an mp3
+// Function to pipe audio and save it as an mp3 ------------------------------------
 function convertAudio(audio, done) {
   const url = audio;
   const start = Date.now();
@@ -88,6 +119,7 @@ function convertAudio(audio, done) {
         let progStatus = p.targetSize;
         readline.cursorTo(process.stdout, 0);
         process.stdout.write(`${progStatus}kb downloaded`);
+        // job.progress( i, frames);
       })
       .on('end', () => {
         console.log(`\nCompleted conversion, Success!! - ${(Date.now() - start) / 1000}s`);
@@ -99,12 +131,17 @@ function convertAudio(audio, done) {
   } 
 };
 
-// Playing from HTML player
+// Get Status ---------------------------------------------------------------------
+app.get('/status', function (req, res) {
+  const jobID = req.body.job;
+});
+
+// Playing from HTML player -------------------------------------------------------
 app.get('/player', function (req, res) {
   res.render('pages/player')
 });
 
-// Reading from MP3
+// Reading from MP3 ---------------------------------------------------------------
 app.get('/music', function(req, res) {
   const filePath = __dirname + '/public/music/music.mp3';
   const stat = fs.statSync(filePath);
@@ -130,7 +167,6 @@ app.get('/music', function(req, res) {
   }  
 });
 
-
 // catch 404 and forward to error handler
 // app.use(function(req, res, next) {
 //   next(createError(404));
@@ -141,7 +177,6 @@ app.get('/music', function(req, res) {
 //   // set locals, only providing error in development
 //   res.locals.message = err.message;
 //   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
 //   // render the error page
 //   res.status(err.status || 500);
 //   res.send('error');

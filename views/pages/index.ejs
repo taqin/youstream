@@ -91,12 +91,25 @@
       .then(function (response) {
         console.log(response.data.jobID);
         streamPlayer(response.data.title);
+        convertionStatus(response.data.jobID);
         })
       .catch((error)=> {
         console.log(error);
         });
     });
 
+    // Poll for progress
+    function convertionStatus(jobID){
+      axios.get('/status', {
+        job: jobID
+      })
+      .then(function (response) {
+        document.getElementById('title').value = response.data.status;
+        })
+      .catch((error)=> {
+        console.log(error);
+        });
+    }
     // Render the Audio Player on demand
     function streamPlayer(title){
       const player = document.getElementById('streamPlayer');
