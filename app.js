@@ -63,22 +63,10 @@ app.post('/create', (req, res) => {
     // Convert the audio
     convertAudio(job.data.url, job, done);
   });
-  job.on('complete', result => {
-    console.log('Job completed with data ', result);
-  });
-  job.progress();
-  job.complete();
-
-  // job.on('complete', result => {
-  //   console.log('Job completed with data ', result);
-  // });
-  // job.on('progress', (progress, data) => {
-  //   console.log('\r  job #' + job.id + ' ' + progress + '% complete with data ', data);
-  // });
 });
 
 // Function to pipe audio and save it as an mp3 ------------------------------------
-function convertAudio(audio, done) {
+function convertAudio(audio, job, done) {
   const url = audio;
   const start = Date.now();
   const stream = ytdl(url, {
@@ -92,12 +80,13 @@ function convertAudio(audio, done) {
       .save(__dirname + '/public/music/music.mp3')
       .on('progress', p => {
         let progStatus = p.targetSize;
+        let frames = p.timemark;
         readline.cursorTo(process.stdout, 0);
-        process.stdout.write(`${progStatus}kb downloaded`);
-        // job.progress( i, frames);
+        process.stdout.write(`${progStatus}kb downloaded - Video Timeline ${frames}`);
       })
       .on('end', () => {
-        console.log(`\nCompleted conversion, Success!! - ${(Date.now() - start) / 1000}s`);
+        console.log(`\nCompleted conversion, Success!! - Time taken ${(Date.now() - start) / 1000}s`);
+        job.complete();
         done();
       });
   } catch (err) {
@@ -107,8 +96,11 @@ function convertAudio(audio, done) {
 };
 
 // Get Status ---------------------------------------------------------------------
-app.get('/status', function (req, res) {
+app.post('/status', function (req, res) {
   const jobID = req.body.job;
+  let status = 'Convertion';
+  // console.log(jobID + 'from API');
+  res.send(jobID + ' from API');
 });
 
 // Playing from HTML player -------------------------------------------------------

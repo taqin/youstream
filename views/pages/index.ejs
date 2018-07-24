@@ -14,7 +14,7 @@
   <body>
     <div class="container mt-3">
       <div class="row">
-        <div class="col-md-6 offset-md-3">
+        <div class="col-md-8 offset-md-2">
           <div class="card">
             <form class="needs-validation" action="/create" method="POST" novalidate>
             <div class="card-header">Audio Streaming
@@ -84,7 +84,6 @@
       // Get the value of the text input.
       // const inputURL = JSON.stringify(document.getElementById('vidurl').value);
       const inputURL = document.getElementById('vidurl').value;
-      
       axios.post('/create', {
         vidurl: inputURL
       })
@@ -100,11 +99,11 @@
 
     // Poll for progress
     function convertionStatus(jobID){
-      axios.get('/status', {
+      axios.post('/status', {
         job: jobID
       })
       .then(function (response) {
-        document.getElementById('title').value = response.data.status;
+        document.getElementById('total').innerHTML = response.data;
         })
       .catch((error)=> {
         console.log(error);
