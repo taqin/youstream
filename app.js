@@ -10,6 +10,8 @@ const ffmpeg_static = require('ffmpeg-static');
 const ffmpeg = require('ffmpeg');
 const fluentFfmpeg = require('fluent-ffmpeg');
 const kue = require('kue');
+const kueUiExpress = require('kue-ui-express');
+
 
 const app = express();
 
@@ -57,7 +59,6 @@ app.post('/create', (req, res) => {
       });
       console.log(`Job ID: ` + job.id);
   });
-
   // Process the KUE ---------------------------------------------------------------
   queue.process('audioConversion', (job, done) => {
     // Convert the audio
@@ -87,6 +88,7 @@ function convertAudio(audio, job, done) {
       .on('end', () => {
         console.log(`\nCompleted conversion, Success!! - Time taken ${(Date.now() - start) / 1000}s`);
         job.complete();
+        job.remove();
         done();
       });
   } catch (err) {
@@ -100,6 +102,11 @@ app.post('/status', function (req, res) {
   const jobID = req.body.job;
   let status = 'Convertion';
   // console.log(jobID + 'from API');
+  kue.Job.get(jobID, function(err, job) {
+    if (job){
+      console.log(job.log());
+    }
+  });
   res.send(jobID + ' from API');
 });
 
@@ -149,7 +156,11 @@ app.get('/music', function(req, res) {
 //   res.send('error');
 // });
 
+kueUiExpress(app, '/kue/', '/kue-api');
+// Mount kue JSON api
+app.use('/kue-api/', kue.app);
 kue.app.listen(4005);  
+
 app.listen(4000);
 console.log('4000 is the magic port');
 
