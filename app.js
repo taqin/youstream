@@ -9,14 +9,15 @@ const ytdl = require('ytdl-core');
 const ffmpeg_static = require('ffmpeg-static');
 const ffmpeg = require('ffmpeg');
 const fluentFfmpeg = require('fluent-ffmpeg');
-const kue = require('kue');
-const kueUiExpress = require('kue-ui-express');
-
+const Queue = require('bull');
 
 const app = express();
 
 // REDIS Kue Initialize
-const queue = kue.createQueue();
+// const queue = kue.createQueue();
+
+
+
 
 // view engine setup
 app.set('view engine', 'ejs');
@@ -42,33 +43,32 @@ app.post('/create', (req, res) => {
   // Get the unique URL of the video for thumbnail generation
   const imageTitle = audio.vidurl.substr(32);
   
-  // Create a KUE
-  let job = queue.create('audioConversion', {
-    title: 'Converting Stream to MP3 - ' + imageTitle, 
-    url: audio.vidurl
-  })
-  .priority('critical')
-  .attempts(5)
-  .backoff(true)
-  .removeOnComplete(true)
-  .save(function (err) {
-    if (!err) 
-      res.status(200).send({
-        jobID : job.id,
-        title : imageTitle 
-      });
-      console.log(`Job ID: ` + job.id);
+  // REDIS Bull Queue Initialize
+  let audioQueue = new Queue('Audio Conversion');
+
+  // Process the Bull Queue --------------------------------------------------------
+  audioQueue.process('Converting Audio', 5, function (job, done) {
+    convertAudio({ 
+      url: audio.vidurl,
+      job
+     });
+     done();
   });
-  // Process the KUE ---------------------------------------------------------------
-  queue.process('audioConversion', (job, done) => {
-    // Convert the audio
-    convertAudio(job.data.url, job, done);
+
+  // Add to the Bull Queue ---------------------------------------------------------
+  audioQueue.add('Converting Audio');
+  audioQueue.on('completed', function (job, result) {
+    // Job completed with output result!
+    res.status(200).send({
+      jobID: job.id,
+      title: imageTitle
+    });
   });
 });
 
 // Function to pipe audio and save it as an mp3 ------------------------------------
-function convertAudio(audio, job, done) {
-  const url = audio;
+function convertAudio(audio) {
+  const url = audio.url;
   const start = Date.now();
   const stream = ytdl(url, {
     quality: 'highestaudio'
@@ -83,13 +83,12 @@ function convertAudio(audio, job, done) {
         let progStatus = p.targetSize;
         let frames = p.timemark;
         readline.cursorTo(process.stdout, 0);
-        process.stdout.write(`${progStatus}kb downloaded - Video Timeline ${frames}`);
+        process.stdout.write(`Job ${audio.job.id} - ${progStatus}kb downloaded - Video Timeline ${frames}`);
+        // transcode audio asynchronously and report progress
+        // console.log(`\nJob ${audio.job.id} is being processed`);
       })
       .on('end', () => {
         console.log(`\nCompleted conversion, Success!! - Time taken ${(Date.now() - start) / 1000}s`);
-        job.complete();
-        job.remove();
-        done();
       });
   } catch (err) {
     console.log('Stream create error', err)
@@ -155,11 +154,6 @@ app.get('/music', function(req, res) {
 //   res.status(err.status || 500);
 //   res.send('error');
 // });
-
-kueUiExpress(app, '/kue/', '/kue-api');
-// Mount kue JSON api
-app.use('/kue-api/', kue.app);
-kue.app.listen(4005);  
 
 app.listen(4000);
 console.log('4000 is the magic port');
