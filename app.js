@@ -1,3 +1,6 @@
+const dotenv = require('dotenv');
+require('dotenv').config();
+
 const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
@@ -13,8 +16,8 @@ const Queue = require('bull');
 
 const app = express();
 
-// REDIS Kue Initialize
-// const queue = kue.createQueue();
+// REDIS Initialize
+const redis = process.env.REDIS_URL;
 
 
 
@@ -44,7 +47,7 @@ app.post('/create', (req, res) => {
   const imageTitle = audio.vidurl.substr(32);
   
   // REDIS Bull Queue Initialize
-  let audioQueue = new Queue('Audio Conversion');
+  let audioQueue = new Queue('Audio Conversion', redis);
 
   // Process the Bull Queue --------------------------------------------------------
   audioQueue.process('Converting Audio', 5, function (job, done) {
