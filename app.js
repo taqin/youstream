@@ -19,9 +19,6 @@ const app = express();
 // REDIS Initialize
 const redis = process.env.REDIS_URL;
 
-
-
-
 // view engine setup
 app.set('view engine', 'ejs');
 
@@ -49,26 +46,27 @@ app.post('/create', (req, res) => {
   // REDIS Bull Queue Initialize
   let audioQueue = new Queue('Audio Conversion', redis);
 
+
+  // Add to the Bull Queue ---------------------------------------------------------
+  audioQueue.add('Converting Audio', { attempts: 3 });
   // Process the Bull Queue --------------------------------------------------------
-  audioQueue.process('Converting Audio', 5, function (job, done) {
+  audioQueue.process('Converting Audio', 5, function (job) {
     convertAudio({ 
       url: audio.vidurl,
       job
      });
-     done();
-  });
-
-  // Add to the Bull Queue ---------------------------------------------------------
-  audioQueue.add('Converting Audio');
-  audioQueue.on('completed', function (job, result) {
-    // Job completed with output result!
-    res.status(200).send({
+    res.send({
       jobID: job.id,
       title: imageTitle
     });
   });
+  // Remove job from Queue --------------------------------------------------------
+  audioQueue.on('completed', function (job, jobDone) {
+    audioQueue.close();
+    jobDone();
+    console.log('Done');
+  });
 });
-
 // Function to pipe audio and save it as an mp3 ------------------------------------
 function convertAudio(audio) {
   const url = audio.url;
@@ -78,22 +76,22 @@ function convertAudio(audio) {
   });
   let streamer
   try {
-    streamer = fluentFfmpeg(stream)
-      .setFfmpegPath(ffmpeg_static.path)
-      .audioBitrate(128)
-      .save(__dirname + '/public/music/music.mp3')
-      .on('progress', p => {
-        let progStatus = p.targetSize;
-        let frames = p.timemark;
-        readline.cursorTo(process.stdout, 0);
-        process.stdout.write(`Job ${audio.job.id} - ${progStatus}kb downloaded - Video Timeline ${frames}`);
-        // transcode audio asynchronously and report progress
-        // console.log(`\nJob ${audio.job.id} is being processed`);
-      })
-      .on('end', () => {
-        console.log(`\nCompleted conversion, Success!! - Time taken ${(Date.now() - start) / 1000}s`);
-      });
-  } catch (err) {
+      console.log(`\nJob ${audio.job.id} is being processed`);
+      streamer = fluentFfmpeg(stream)
+        .setFfmpegPath(ffmpeg_static.path)
+        .audioBitrate(128)
+        .on('progress', p => {
+          let progStatus = p.targetSize;
+          let frames = p.timemark;
+          readline.cursorTo(process.stdout, 0);
+          process.stdout.write(`Job ${audio.job.id} - ${progStatus}kb downloaded - Video Timeline ${frames}`);
+          // transcode audio asynchronously and report progress
+        })
+        .on('end', () => {
+          console.log(`\nSuccess! Completed Job ${audio.job.id} - Time taken ${(Date.now() - start) / 1000}s`);
+        })
+        .save(__dirname + '/public/music/music.mp3');
+      } catch (err) {
     console.log('Stream create error', err)
     return res.status(500).send()
   } 

@@ -20,7 +20,15 @@
             <div class="card-header">Audio Streaming
               <div id="total" class="float-right">kb</div>
             </div>
-            <img id="thumbnail" class="card-img-top" src="https://img.youtube.com/vi/<%= thumbnail %>/hqdefault.jpg" alt="Card image cap">
+            <div class="row">
+              <div class="container">
+                <p>https://www.youtube.com/watch?v=kJQP7kiw5Fk <span>4.41</span></p>
+              </div>
+            </div>
+            <div class="container">
+              <img id="thumbnail" class="card-img-topx" src="https://img.youtube.com/vi/<%= thumbnail %>/hqdefault.jpg" alt="Card image cap">
+            </div>
+
             <div class="progress">
               <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
             </div>
@@ -89,6 +97,7 @@
       })
       .then(function (response) {
         console.log(response.data.jobID);
+        console.log(response.data.title);
         streamPlayer(response.data.title);
         // convertionStatus(response.data.jobID);
         })
@@ -114,6 +123,7 @@
       const player = document.getElementById('streamPlayer');
       // Update the thumbnail.
       document.getElementById("thumbnail").src="https://img.youtube.com/vi/"+title+"/hqdefault.jpg";
+    
       // Append music player here.
       player.innerHTML = "<p>Read from MP3 Stream</p>" 
           +"<audio controls preload='auto' style='width:100%;'>"
