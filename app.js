@@ -1,24 +1,23 @@
 const dotenv = require('dotenv');
 require('dotenv').config();
 
-const createError = require('http-errors');
 const express = require('express');
+const createError = require('http-errors');
 const path = require('path');
+const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const Queue = require('bull');
-const fs = require('fs');
-
 const Arena = require('bull-arena');
 
 const converter = require('./converter');
 
 const app = express();
 
-// REDIS Initialize
+// REDIS Initialize --------------------------------------------------------------
 const redis = process.env.REDIS_URL;
 
-// REDIS Bull Queue Initialize
+// REDIS Bull Queue Initialize ---------------------------------------------------
 const audioQueue = new Queue('Audio_Conversion', redis);
 
 const arena = Arena({
@@ -33,7 +32,7 @@ const arena = Arena({
   ]
 });
 
-// view engine setup
+// View engine setup -------------------------------------------------------------
 app.set('view engine', 'ejs');
 
 app.use(logger('dev'));
@@ -56,11 +55,15 @@ app.get('/', function (req, res) {
 app.post('/create', (req, res) => {
   const audio = req.body;
   // Get the unique URL of the video for thumbnail generation
-  const imageTitle = audio.vidurl.substr(32); 
-  
+  const imageTitle = audio.vidurl.substr(32);
+  const timeStamp = Math.floor(Date.now());
+
   // Add to the Bull Queue --------------------------------------------------------
   try {
-    audioQueue.add('Converting', audio, { attempts: 1 });
+    audioQueue.add('Converting', audio, { 
+      attempts: 3,
+      jobId: timeStamp
+    });
     return res.status(200).send({
       title: imageTitle
     });
@@ -69,6 +72,7 @@ app.post('/create', (req, res) => {
   }
 });
 
+// Processing the Queue -----------------------------------------------------------
 audioQueue.process('*', (job) => {
   // Object that is passed to the job is in job.data
   converter(job, job.data.vidurl)
@@ -76,7 +80,6 @@ audioQueue.process('*', (job) => {
       console.log(res);
     })
     .catch(err => {
-      // res.status(500).send();
       console.log(err);
     });
 });
@@ -88,7 +91,7 @@ app.get('/status/:job', function (req, res) {
 
 // Playing from HTML player -------------------------------------------------------
 app.get('/player', function (req, res) {
-  res.render('pages/player')
+  res.render('pages/player');
 });
 
 // Reading from MP3 ---------------------------------------------------------------
@@ -116,7 +119,6 @@ app.get('/music', function(req, res) {
     fs.createReadStream(path).pipe(res);
   }  
 });
-
 
 app.listen(4000);
 console.log('4000 is the magic port');
