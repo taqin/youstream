@@ -8,8 +8,9 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
-    "browser-sync": "^2.24.5",
+    "browser-sync": "^2.24.6",
     "bull": "^3.4.4",
+    "bull-arena": "^2.4.5",
     "cookie-parser": "~1.4.3",
     "debug": "~2.6.9",
     "dotenv": "^6.0.0",

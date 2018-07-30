@@ -9,6 +9,8 @@ const logger = require('morgan');
 const Queue = require('bull');
 const fs = require('fs');
 
+const Arena = require('bull-arena');
+
 const converter = require('./converter');
 
 const app = express();
@@ -17,7 +19,19 @@ const app = express();
 const redis = process.env.REDIS_URL;
 
 // REDIS Bull Queue Initialize
-const audioQueue = new Queue('Audio Conversion', redis);
+const audioQueue = new Queue('Audio_Conversion', redis);
+
+const arena = Arena({
+  queues: [
+    {
+      // Name of the bull queue, this name must match up exactly with what you've defined in bull.
+      name: 'Audio_Conversion',
+
+      // Hostname or queue prefix, you can put whatever you want.
+      hostId: 'Audio Queues'
+    }
+  ]
+});
 
 // view engine setup
 app.set('view engine', 'ejs');
@@ -26,6 +40,7 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use('/arena', arena)
 
 // Index page 
 app.get('/', function (req, res) {
@@ -41,30 +56,29 @@ app.get('/', function (req, res) {
 app.post('/create', (req, res) => {
   const audio = req.body;
   // Get the unique URL of the video for thumbnail generation
-  const imageTitle = audio.vidurl.substr(32);
+  const imageTitle = audio.vidurl.substr(32); 
+  
+  // Add to the Bull Queue --------------------------------------------------------
+  try {
+    audioQueue.add('Converting', audio, { attempts: 1 });
+    return res.status(200).send({
+      title: imageTitle
+    });
+  } catch (error) {
+    res.sendStatus(500);
+  }
+});
 
-  // Add to the Bull Queue ---------------------------------------------------------
-  audioQueue.add('Converting Audio - ' + imageTitle,
-  { attempts: 3, 
-    removeOnFail: true, 
-    removeOnComplete: true, 
-  });
-
-  audioQueue.process('Converting Audio - ' + imageTitle, (job) => {    
-    converter(job, audio)
-    .then(() => {
-      console.log('Resolved');
-      // done();
+audioQueue.process('*', (job) => {
+  // Object that is passed to the job is in job.data
+  converter(job, job.data.vidurl)
+    .then((res) => {
+      console.log(res);
     })
     .catch(err => {
-      res.status(500).send();
+      // res.status(500).send();
+      console.log(err);
     });
-  });
-
-  res.send({
-    // jobID: job.id,
-    title: imageTitle
-  });
 });
 
 // Get Status ---------------------------------------------------------------------
