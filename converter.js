@@ -1,61 +1,81 @@
-'use strict';
+const fs = require('fs');
+const readline = require('readline');
+const ytdl = require('ytdl-core');
+const ffmpeg_static = require('ffmpeg-static');
+const ffmpeg = require('ffmpeg');
+const fluentFfmpeg = require('fluent-ffmpeg');
 
-let redisConfig;
-if (process.env.NODE_ENV === 'production') {
-  redisConfig = {
-    redis: {
-      port: process.env.REDIS_PORT,
-      host: process.env.REDIS_HOST,
-      auth: process.env.REDIS_PASS,
-      options: {
-        no_ready_check: false
-      }
-    }
-  };
-} else {
-  redisConfig = {};
+function Converter(job, audio) {
+  const url = audio.vidurl;
+  const start = Date.now();
+  const stream = ytdl(url, {
+    quality: 'highestaudio'
+  });
+  let streamer;
+
+  try {
+    console.log(`\nJob ${job.id} is being processed`);
+    streamer = fluentFfmpeg(stream)
+      .setFfmpegPath(ffmpeg_static.path)
+      .audioChannels(2)
+      .audioBitrate(128)
+      .on('progress', p => {
+        let progStatus = p.targetSize;
+        let frames = p.timemark;
+        // readline.cursorTo(process.stdout, 0);
+        // process.stdout.write(`Job ${audio.job.id} - ${progStatus}kb downloaded - Video Timeline ${frames}`);
+        console.log(`Job ${job.id} - ${progStatus}kb downloaded - Video Timeline ${frames}`);
+        // console.log(`Job - ${progStatus}kb downloaded - Video Timeline ${frames}`);
+        // transcode audio asynchronously and report progress
+      })
+      .on('end', () => {
+        console.log(`\nSuccess! Completed Job ${job.id} - Time taken ${(Date.now() - start) / 1000}s`);
+        // console.log(`\nSuccess! Completed Job - Time taken ${(Date.now() - start) / 1000}s`);
+        job.remove();
+        return Promise.resolve();  
+      })
+      .output(__dirname + '/public/music/music.mp3')
+      .run();
+    // return Promise.resolve();      
+  } catch (err) {
+    console.log('Stream create error', err);
+    return Promise.reject();
+  }
 }
+module.exports = Converter;
 
-const kue = require('kue');
-const queue = kue.createQueue(redisConfig);
-queue.setMaxListeners(1000);
-queue.watchStuckJobs(1000 * 10);
-
-queue.on('ready', () => {
-  console.info('Queue is ready!');
-});
-
-queue.on('error', (err) => {
-  console.error('There was an error in the main queue!');
-  console.error(err);
-  console.error(err.stack);
-});
-
-// Process up to 20 jobs concurrently
-queue.process('audio', 20, (job, done) => {
-  const data = job.data;
-  //  const progress = job.progress(completed, total, [data]);
-  
-  
-   // Call done when finished
-  done();
-});
-
-module.exports = {
-  create: (data, done) => {
-    queue.create('audio', data)
-      .priority('critical')
-      .attempts(8)
-      .backoff(true)
-      .removeOnComplete(false)
-      .save(err => {
-        if (err) {
-          console.error(err);
-          done(err);
-        }
-        if (!err) {
-          done();
-        }
-      });
+// Function to pipe audio and save it as an mp3 ------------------------------------
+/*
+function convertAudio(audio) {
+  const url = audio.url;
+  const start = Date.now();
+  const stream = ytdl(url, {
+    quality: 'highestaudio'
+  });
+  let streamer
+  try {
+    console.log(`\nJob ${audio.job.id} is being processed`);
+    streamer = fluentFfmpeg(stream)
+      .setFfmpegPath(ffmpeg_static.path)
+      .audioChannels(2)
+      .audioBitrate(128)
+      .on('progress', p => {
+        let progStatus = p.targetSize;
+        let frames = p.timemark;
+        // readline.cursorTo(process.stdout, 0);
+        // process.stdout.write(`Job ${audio.job.id} - ${progStatus}kb downloaded - Video Timeline ${frames}`);
+        console.log(`Job ${audio.job.id} - ${progStatus}kb downloaded - Video Timeline ${frames}`);
+        // transcode audio asynchronously and report progress
+      })
+      .on('end', () => {
+        console.log(`\nSuccess! Completed Job ${audio.job.id} - Time taken ${(Date.now() - start) / 1000}s`);
+        // console.log(audio.job);
+      })
+      .output(__dirname + '/public/music/music.mp3')
+      .run();
+  } catch (err) {
+    console.log('Stream create error', err)
+    return res.status(500).send()
   }
 };
+*/

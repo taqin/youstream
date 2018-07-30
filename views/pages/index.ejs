@@ -51,7 +51,7 @@
               <button class="btn btn-primary btn-lg" type="submit">Submit</button>
               <a id="btnStream" class="btn btn-danger btn-lg text-white">Stream</a>
               <a id="btnCreate" href="/player" class="btn btn-warning btn-lg text-white">Listen</a>
-              <a id="btnDownload" class="btn btn-success btn-lg text-white">Download</a>
+              <a id="btnDownload" href="/music" class="btn btn-success btn-lg text-white">Download</a>
             </div>
           </form>
           </div>
@@ -108,9 +108,7 @@
 
     // Poll for progress
     function convertionStatus(jobID){
-      axios.post('/status', {
-        job: jobID
-      })
+      axios.get('/status/'+ jobID)
       .then(function (response) {
         document.getElementById('total').innerHTML = response.data;
         })
